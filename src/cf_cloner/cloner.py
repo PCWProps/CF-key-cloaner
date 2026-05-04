@@ -51,7 +51,7 @@ def ensure_1password_signed_in() -> None:
     run_command(["op", "account", "get"])
 
 
-def select_1password_item() -> tuple[str, str]:
+def select_1password_item() -> str:
     items_raw = run_command(
         ["op", "item", "list", "--categories", "API Credential", "--format", "json"]
     )
@@ -59,14 +59,14 @@ def select_1password_item() -> tuple[str, str]:
     if not items:
         raise CfClonerError("No 1Password API Credential items were found.")
     lines: list[str] = []
-    id_to_title: dict[str, str] = {}
+    item_ids: list[str] = []
     for item in items:
         item_id = item.get("id")
         title = item.get("title", "Untitled")
         vault = item.get("vault", {}).get("name", "Unknown Vault")
         if not item_id:
             continue
-        id_to_title[item_id] = title
+        item_ids.append(item_id)
         lines.append(f"{title} [{vault}] | {item_id}")
     selected = run_command(
         [
@@ -82,7 +82,7 @@ def select_1password_item() -> tuple[str, str]:
     if not selected:
         raise CfClonerError("Selection cancelled.")
     item_id = selected.rsplit("|", 1)[-1].strip()
-    return item_id, id_to_title.get(item_id, "Unknown")
+    return item_id
 
 
 def get_credential_reference(item_id: str) -> str:
@@ -227,9 +227,9 @@ def clone_interactive(expiry_days: int) -> None:
     ensure_1password_signed_in()
     print("☁️  cf-cloner")
     print("Select the source Cloudflare token from 1Password.")
-    item_id, source_title = select_1password_item()
+    item_id = select_1password_item()
     source_reference = get_credential_reference(item_id)
-    print(f"Selected source item: {source_title}")  # lgtm[py/clear-text-logging-sensitive-data]
+    print("Source item selected.")
     new_name = prompt_required("New Cloudflare token name: ")
     target_vault = prompt_required("Target 1Password vault: ")
     print("Reading source token from 1Password...")
